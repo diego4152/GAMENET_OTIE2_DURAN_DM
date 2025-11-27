@@ -3,6 +3,9 @@ using Mirror;
 using System.Linq;
 using System;
 using System.Collections.Generic;
+using System.Collections;
+using UnityEngine.SceneManagement;
+using System.IO;
 
 /*
 	Documentation: https://mirror-networking.gitbook.io/docs/components/network-room-manager
@@ -23,6 +26,12 @@ public class L2D_NetworkManager : NetworkRoomManager
 {
     // Overrides the base singleton so we don't
     // have to cast to this type everywhere.
+
+    [Scene, SerializeField] private string firstSceneToLoad;
+
+    private List<string> sceneNames = new List<string>();
+    private bool isSubsceneLoaded = false;
+    private bool isInTransition = false;
     public new static L2D_NetworkManager singleton => (L2D_NetworkManager)NetworkRoomManager.singleton;
 
     public Action<HashSet<NetworkRoomPlayer>> OnAddPlayer;
@@ -33,25 +42,91 @@ public class L2D_NetworkManager : NetworkRoomManager
     /// This is called on the server when the server is started - including when a host is started.
     /// </summary>
     public override void OnRoomStartServer()
-    { }
+    {
+        for (int i = 3; i < SceneManager.sceneCountInBuildSettings; i++)
+        {
+            sceneNames.Add(Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i)));
+        }
+    }
 
-    /// <summary>
-    /// This is called on the server when the server is stopped - including when a host is stopped.
-    /// </summary>
-    public override void OnRoomStopServer()
-    { }
+    public override void OnServerSceneChanged(string sceneName)
+    {
+        base.OnServerSceneChanged(sceneName);
 
-    /// <summary>
-    /// This is called on the host when a host is started.
-    /// </summary>
-    public override void OnRoomStartHost()
-    { }
+        if (sceneName == GameplayScene)
+        {
+            StartCoroutine(ServerLoadSubscenes());
+        }
+    }
 
-    /// <summary>
-    /// This is called on the host when the host is stopped.
-    /// </summary>
-    public override void OnRoomStopHost()
-    { }
+    private IEnumerator ServerLoadSubscenes()
+    {
+        foreach (string sceneName in sceneNames)
+        {
+            yield return SceneManager.LoadSceneAsync(sceneName, new LoadSceneParameters
+            {
+                loadSceneMode = LoadSceneMode.Additive,
+                localPhysicsMode = LocalPhysicsMode.Physics3D
+            });
+        }
+
+        isSubsceneLoaded = true;
+    }
+
+    public override void OnClientSceneChanged()
+    {
+        if (!isInTransition)
+            base.OnClientSceneChanged();
+    }
+
+    public override void OnClientChangeScene(string newSceneName, SceneOperation sceneOperation, bool customHandling)
+    {
+        if (sceneOperation == SceneOperation.LoadAdditive)
+        {
+            StartCoroutine(LoadAdditiveScene(newSceneName));
+        }
+
+        if (sceneOperation == SceneOperation.UnloadAdditive)
+        {
+            StartCoroutine(UnloadAdditiveScene(newSceneName));
+        }
+    }
+
+    private IEnumerator LoadAdditiveScene(string sceneName)
+    {
+        isInTransition = true;
+
+        if (mode == NetworkManagerMode.ClientOnly)
+        {
+            loadingSceneAsync = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+
+            while (loadingSceneAsync != null && !loadingSceneAsync.isDone)
+            {
+                yield return null;
+            }
+        }
+
+        NetworkClient.isLoadingScene = false;
+        isInTransition = false;
+
+        OnRoomClientSceneChanged();
+    }
+
+    private IEnumerator UnloadAdditiveScene(string sceneName)
+    {
+        isInTransition = true;
+
+        if (mode == NetworkManagerMode.ClientOnly)
+        {
+            yield return SceneManager.UnloadSceneAsync(sceneName);
+            yield return Resources.UnloadUnusedAssets();
+        }
+
+        NetworkClient.isLoadingScene = false;
+        isInTransition = false;
+
+        OnRoomClientSceneChanged();
+    }
 
     /// <summary>
     /// This is called on the server when a new client connects to the server.
@@ -123,7 +198,36 @@ public class L2D_NetworkManager : NetworkRoomManager
     /// <returns>False to not allow this player to replace the room player.</returns>
     public override bool OnRoomServerSceneLoadedForPlayer(NetworkConnectionToClient conn, GameObject roomPlayer, GameObject gamePlayer)
     {
-        return base.OnRoomServerSceneLoadedForPlayer(conn, roomPlayer, gamePlayer);
+        NetworkServer.ReplacePlayerForConnection(conn, gamePlayer, ReplacePlayerOptions.KeepAuthority);
+        StartCoroutine(AddPlayerToGameScene(conn));
+
+        return false;
+    }
+
+    private IEnumerator AddPlayerToGameScene(NetworkConnectionToClient conn)
+    {
+        while (!isSubsceneLoaded)
+            yield return null;
+
+        NetworkIdentity[] allObjectWithNetworkIdentity = FindObjectsOfType<NetworkIdentity>();
+
+        foreach (NetworkIdentity identity in allObjectWithNetworkIdentity)
+        {
+            identity.enabled = true;
+        }
+
+        GameObject playerObject = conn.identity.gameObject;
+
+        Debug.Log(playerObject.name);
+        NetworkServer.RemovePlayerForConnection(conn, RemovePlayerOptions.KeepActive);
+
+        conn.Send(new SceneMessage { sceneName = firstSceneToLoad, sceneOperation = SceneOperation.LoadAdditive, customHandling = true });
+        SceneManager.MoveGameObjectToScene(playerObject, SceneManager.GetSceneByPath(firstSceneToLoad));
+
+        yield return new WaitForEndOfFrame();
+
+        NetworkServer.AddPlayerForConnection(conn, playerObject);
+        playerObject.GetComponent<Rigidbody>().isKinematic = false;
     }
 
     /// <summary>
@@ -199,7 +303,8 @@ public class L2D_NetworkManager : NetworkRoomManager
     /// This is called on the client when the client is finished loading a new networked scene.
     /// </summary>
     public override void OnRoomClientSceneChanged()
-    { }
+    {
+    }
 
     #endregion Client Callbacks
 

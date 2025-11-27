@@ -12,6 +12,12 @@ EditorBuildSettings:
     path: Assets/Scenes/RoomScene.unity
     guid: 33e0c35287b5cca439536cb3c8c4844c
   - enabled: 1
-    path: Assets/Scenes/OnlineScene.unity
+    path: Assets/Scenes/PersistentScene.unity
+    guid: 1b352e48495798849a436c418686a92b
+  - enabled: 1
+    path: Assets/Scenes/GameplayScene.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/TestScene.unity
+    guid: dc7dd5d205f373e4186dad2387dcd393
   m_configObjects: {}

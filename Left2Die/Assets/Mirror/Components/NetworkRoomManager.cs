@@ -64,7 +64,7 @@ namespace Mirror
         /// </summary>
         [Tooltip("Diagnostic flag indicating all players are ready to play")]
         [FormerlySerializedAs("allPlayersReady")]
-        [ReadOnly, SerializeField] bool _allPlayersReady;
+        [ReadOnly, SerializeField] private bool _allPlayersReady;
 
         /// <summary>
         /// These slots track players that enter the room.
@@ -118,7 +118,7 @@ namespace Mirror
             }
         }
 
-        void SceneLoadedForPlayer(NetworkConnectionToClient conn, GameObject roomPlayer)
+        private void SceneLoadedForPlayer(NetworkConnectionToClient conn, GameObject roomPlayer)
         {
             //Debug.Log($"NetworkRoom SceneLoadedForPlayer scene: {SceneManager.GetActiveScene().path} {conn}");
 
@@ -417,7 +417,7 @@ namespace Mirror
             OnRoomStopHost();
         }
 
-        #endregion
+        #endregion server handlers
 
         #region client handlers
 
@@ -485,47 +485,54 @@ namespace Mirror
             OnRoomClientSceneChanged();
         }
 
-        #endregion
+        #endregion client handlers
 
         #region room server virtuals
 
         /// <summary>
         /// This is called on the host when a host is started.
         /// </summary>
-        public virtual void OnRoomStartHost() {}
+        public virtual void OnRoomStartHost()
+        { }
 
         /// <summary>
         /// This is called on the host when the host is stopped.
         /// </summary>
-        public virtual void OnRoomStopHost() {}
+        public virtual void OnRoomStopHost()
+        { }
 
         /// <summary>
         /// This is called on the server when the server is started - including when a host is started.
         /// </summary>
-        public virtual void OnRoomStartServer() {}
+        public virtual void OnRoomStartServer()
+        { }
 
         /// <summary>
         /// This is called on the server when the server is started - including when a host is stopped.
         /// </summary>
-        public virtual void OnRoomStopServer() {}
+        public virtual void OnRoomStopServer()
+        { }
 
         /// <summary>
         /// This is called on the server when a new client connects to the server.
         /// </summary>
         /// <param name="conn">The new connection.</param>
-        public virtual void OnRoomServerConnect(NetworkConnectionToClient conn) {}
+        public virtual void OnRoomServerConnect(NetworkConnectionToClient conn)
+        { }
 
         /// <summary>
         /// This is called on the server when a client disconnects.
         /// </summary>
         /// <param name="conn">The connection that disconnected.</param>
-        public virtual void OnRoomServerDisconnect(NetworkConnectionToClient conn) {}
+        public virtual void OnRoomServerDisconnect(NetworkConnectionToClient conn)
+        { }
 
         /// <summary>
         /// This is called on the server when a networked scene finishes loading.
         /// </summary>
         /// <param name="sceneName">Name of the new scene.</param>
-        public virtual void OnRoomServerSceneChanged(string sceneName) {}
+        public virtual void OnRoomServerSceneChanged(string sceneName)
+        { }
 
         /// <summary>
         /// This allows customization of the creation of the room-player object on the server.
@@ -613,48 +620,56 @@ namespace Mirror
         /// This is called on the server when CheckReadyToBegin finds that players are not ready
         /// <para>May be called multiple times while not ready players are joining</para>
         /// </summary>
-        public virtual void OnRoomServerPlayersNotReady() {}
+        public virtual void OnRoomServerPlayersNotReady()
+        { }
 
-        #endregion
+        #endregion room server virtuals
 
         #region room client virtuals
 
         /// <summary>
         /// This is a hook to allow custom behaviour when the game client enters the room.
         /// </summary>
-        public virtual void OnRoomClientEnter() {}
+        public virtual void OnRoomClientEnter()
+        { }
 
         /// <summary>
         /// This is a hook to allow custom behaviour when the game client exits the room.
         /// </summary>
-        public virtual void OnRoomClientExit() {}
+        public virtual void OnRoomClientExit()
+        { }
 
         /// <summary>
         /// This is called on the client when it connects to server.
         /// </summary>
-        public virtual void OnRoomClientConnect() {}
+        public virtual void OnRoomClientConnect()
+        { }
 
         /// <summary>
         /// This is called on the client when disconnected from a server.
         /// </summary>
-        public virtual void OnRoomClientDisconnect() {}
+        public virtual void OnRoomClientDisconnect()
+        { }
 
         /// <summary>
         /// This is called on the client when a client is started.
         /// </summary>
-        public virtual void OnRoomStartClient() {}
+        public virtual void OnRoomStartClient()
+        { }
 
         /// <summary>
         /// This is called on the client when the client stops.
         /// </summary>
-        public virtual void OnRoomStopClient() {}
+        public virtual void OnRoomStopClient()
+        { }
 
         /// <summary>
         /// This is called on the client when the client is finished loading a new networked scene.
         /// </summary>
-        public virtual void OnRoomClientSceneChanged() {}
+        public virtual void OnRoomClientSceneChanged()
+        { }
 
-        #endregion
+        #endregion room client virtuals
 
         #region optional UI
 
@@ -678,6 +693,6 @@ namespace Mirror
                 GUI.Box(new Rect(10f, 180f, 520f, 150f), "PLAYERS");
         }
 
-        #endregion
+        #endregion optional UI
     }
 }
